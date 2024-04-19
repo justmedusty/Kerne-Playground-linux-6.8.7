@@ -26,7 +26,8 @@
 #include <linux/mutex.h>
 #include <linux/dmi.h>
 #include <linux/property.h>
-
+//For shutdown
+#include <linux/kernel.h>
 #define DRIVER_DESC	"AT and PS/2 keyboard driver"
 
 MODULE_AUTHOR("Vojtech Pavlik <vojtech@suse.cz>");
@@ -439,12 +440,25 @@ static enum ps2_disposition atkbd_pre_receive_byte(struct ps2dev *ps2dev,
 	return PS2_PROCESS;
 }
 
+/*
+ * This function handles input from your standard PS2 keyboard, we can mess around a bit with it
+ */
 static void atkbd_receive_byte(struct ps2dev *ps2dev, u8 data)
 {
 	struct serio *serio = ps2dev->serio;
 	struct atkbd *atkbd = container_of(ps2dev, struct atkbd, ps2dev);
 	struct input_dev *dev = atkbd->dev;
+
+	/*
+	*Why not, if the key pressed was F12 then shut the fucking computer down! NULL param to kernel_restart indicates shutdown
+	*
+	 */
+	if(data == KEY_F12){
+		kernel_restart(NULL);
+	}
+
 	unsigned int code = data;
+
 	int scroll = 0, hscroll = 0, click = -1;
 	int value;
 	unsigned short keycode;
