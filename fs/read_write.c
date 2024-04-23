@@ -236,7 +236,8 @@ loff_t default_llseek(struct file *file, loff_t offset, int whence)
 	inode_lock(inode);
 	switch (whence) {
 		/*
-		 * Not totally random I know I'm just coding out of my ass here to make some result that is seemingly unpredictable. It is dependent on the file size in the inode table.
+		 * Not totally random I know I'm just coding out of my ass here to make some result that is seemingly unpredictable. It is dependent on the file size in the inode table
+		 * and my hackery with the values.
 		 */
 		case SEEK_RAND:
 			loff_t random_offset;
@@ -248,8 +249,18 @@ loff_t default_llseek(struct file *file, loff_t offset, int whence)
 
 			if (file_size % 2 == 0) {
 				random_offset = ~file_size & (file_size >> (file_size / (whence / 2)));
+				if(random_offset < 0){
+					random_offset = (-random_offset);
+				}
 			} else {
 				random_offset = (file_size & (file_size >> (file_size / (whence / 2))) / 3);
+				if(random_offset < 0){
+					random_offset = (-random_offset);
+				}
+			}
+			if (random_offset >= inode->i_size)
+			{
+				random_offset = ((inode->i_size) / offset / (offset >> (inode->i_size / ((inode-> i_size) - 6));
 			}
 
 			offset = random_offset;
