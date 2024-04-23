@@ -87,6 +87,7 @@ generic_file_llseek_size(struct file *file, loff_t offset, int whence,
 		loff_t maxsize, loff_t eof)
 {
 	switch (whence) {
+
 	case SEEK_END:
 		offset += eof;
 		break;
@@ -234,6 +235,25 @@ loff_t default_llseek(struct file *file, loff_t offset, int whence)
 
 	inode_lock(inode);
 	switch (whence) {
+		/*
+		 * Not totally random I know I'm just coding out of my ass here to make some result that is seemingly unpredictable. It is dependent on the file size in the inode table.
+		 */
+		case SEEK_RAND:
+			loff_t random_offset;
+			loff_t file_size = i_size_read(inode);
+
+			// Ensure file_size is not 0 to avoid division by zero
+			if (file_size == 0)
+				break;
+
+			if (file_size % 2 == 0) {
+				random_offset = ~file_size & (file_size >> (file_size / (whence / 2)));
+			} else {
+				random_offset = (file_size & (file_size >> (file_size / (whence / 2))) / 3);
+			}
+
+			offset = random_offset;
+			break;
 		case SEEK_END:
 			offset += i_size_read(inode);
 			break;
@@ -701,7 +721,7 @@ ssize_t ksys_pwrite64(unsigned int fd, const char __user *buf,
 	f = fdget(fd);
 	if (f.file) {
 		ret = -ESPIPE;
-		if (f.file->f_mode & FMODE_PWRITE)  
+		if (f.file->f_mode & FMODE_PWRITE)
 			ret = vfs_write(f.file, buf, count, &pos);
 		fdput(f);
 	}
